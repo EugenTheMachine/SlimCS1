@@ -275,7 +275,7 @@ def train_epoch(
         batch_images, batch_points = to_tensor(images, all_points, config["sam_image_size"])
 
         # Forward pass with mixed precision
-        with autocast():
+        with autocast(device_type="cuda"):
             loss = compute_loss(model, config, batch_images, batch_points, 
                               cell_masks, all_points, all_cell_probs)
             
@@ -294,7 +294,7 @@ def train_epoch(
 
     train_loss = total_train_loss / len_train
     torch.cuda.empty_cache()
-    
+
     # Validation phase
     if epoch % val_period == 0:
         model.eval()
@@ -311,7 +311,7 @@ def train_epoch(
         val_loss = total_val_loss / len_test
     else:
         val_loss = -1
-        
+
     torch.cuda.empty_cache()
     return train_loss, val_loss
 
