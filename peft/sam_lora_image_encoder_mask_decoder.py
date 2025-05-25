@@ -29,7 +29,8 @@ import torch
 import torch.nn as nn
 from torch.nn.parameter import Parameter
 
-from slim_sam.segment_anything import sam_model_registry
+# from slim_sam.segment_anything import sam_model_registry
+from segment_anything import sam_model_registry
 from slim_sam.segment_anything.modeling import Sam
 
 
