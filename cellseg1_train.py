@@ -17,8 +17,8 @@ from data.dataset import TrainDataset
 from gpu_memory_tracker import GPUMemoryTracker
 from peft.sam_lora_image_encoder_mask_decoder import LoRA_Sam
 from sampler import create_collate_fn
-# from slim_sam.segment_anything import sam_model_registry
-from segment_anything import sam_model_registry
+from slim_sam.segment_anything import sam_model_registry
+# from segment_anything import sam_model_registry
 from set_environment import set_env
 from predict import load_model_from_config
 

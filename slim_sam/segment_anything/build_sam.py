@@ -5,7 +5,7 @@
 # LICENSE file in the root directory of this source tree.
 
 import torch
-
+import torch.nn.functional as F
 from functools import partial
 
 from .modeling import ImageEncoderViT, MaskDecoder, PromptEncoder, Sam, TwoWayTransformer
@@ -82,89 +82,32 @@ sam_model_registry = {
 }
 
 
-# def _build_sam(
-#     encoder_embed_dim,
-#     mlp_dim,
-#     encoder_depth,
-#     encoder_num_heads,
-#     encoder_global_attn_indexes,
-#     image_size,
-#     checkpoint=None,
-#     use_rel_pos=True,
-# ):
-#     prompt_embed_dim = 256
-#     # image_size = 1024
-#     vit_patch_size = 16
-#     image_embedding_size = image_size // vit_patch_size
-#     sam = Sam(
-#         image_encoder=ImageEncoderViT(
-#             depth=encoder_depth,
-#             embed_dim=encoder_embed_dim,
-#             mlp_dim=mlp_dim,
-#             img_size=image_size,
-#             mlp_ratio=4,
-#             norm_layer=partial(torch.nn.LayerNorm, eps=1e-6),
-#             num_heads=encoder_num_heads,
-#             patch_size=vit_patch_size,
-#             qkv_bias=True,
-#             use_rel_pos=use_rel_pos,
-#             global_attn_indexes=encoder_global_attn_indexes,
-#             window_size=14,
-#             out_chans=prompt_embed_dim,
-#         ),
-#         prompt_encoder=PromptEncoder(
-#             embed_dim=prompt_embed_dim,
-#             image_embedding_size=(image_embedding_size, image_embedding_size),
-#             input_image_size=(image_size, image_size),
-#             mask_in_chans=16,
-#         ),
-#         mask_decoder=MaskDecoder(
-#             num_multimask_outputs=3,
-#             transformer=TwoWayTransformer(
-#                 depth=2,
-#                 embedding_dim=prompt_embed_dim,
-#                 mlp_dim=2048,
-#                 num_heads=8,
-#             ),
-#             transformer_dim=prompt_embed_dim,
-#             iou_head_depth=3,
-#             iou_head_hidden_dim=256,
-#         ),
-#         pixel_mean=[123.675, 116.28, 103.53],
-#         pixel_std=[58.395, 57.12, 57.375],
-#     )
-#     sam.eval()
-#     if checkpoint is not None:
-#         with open(checkpoint, "rb") as f:
-#             state_dict = torch.load(f)
-#         # sam.load_state_dict(state_dict, strict = True)  # NOTE: originally, strict was set to True
-#         sam.load_state_dict(state_dict, strict = False)
-#     return sam
-
-
 def _build_sam(
     encoder_embed_dim,
+    mlp_dim,
     encoder_depth,
     encoder_num_heads,
     encoder_global_attn_indexes,
     image_size,
     checkpoint=None,
+    use_rel_pos=True,
 ):
     prompt_embed_dim = 256
-    # image_size = 512
+    # image_size = 1024
     vit_patch_size = 16
     image_embedding_size = image_size // vit_patch_size
     sam = Sam(
         image_encoder=ImageEncoderViT(
             depth=encoder_depth,
             embed_dim=encoder_embed_dim,
+            mlp_dim=mlp_dim,
             img_size=image_size,
             mlp_ratio=4,
             norm_layer=partial(torch.nn.LayerNorm, eps=1e-6),
             num_heads=encoder_num_heads,
             patch_size=vit_patch_size,
             qkv_bias=True,
-            use_rel_pos=True,
+            use_rel_pos=use_rel_pos,
             global_attn_indexes=encoder_global_attn_indexes,
             window_size=14,
             out_chans=prompt_embed_dim,
@@ -211,30 +154,6 @@ def check_contain(key, except_strings):
     return False
 
 
-# https://github.com/hitachinsk/SAMed/blob/main/segment_anything/build_sam.py
-
-# MIT License
-
-# Copyright (c) 2023 Kaidong Zhang
-
-# Permission is hereby granted, free of charge, to any person obtaining a copy
-# of this software and associated documentation files (the "Software"), to deal
-# in the Software without restriction, including without limitation the rights
-# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-# copies of the Software, and to permit persons to whom the Software is
-# furnished to do so, subject to the following conditions:
-
-# The above copyright notice and this permission notice shall be included in all
-# copies or substantial portions of the Software.
-
-
-# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-# SOFTWARE.
 def load_from(sam, state_dict, image_size, vit_patch_size, encoder_global_attn_indexes):
     sam_dict = sam.state_dict()
     except_strings = []

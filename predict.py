@@ -14,8 +14,8 @@ from data.utils import (
 )
 from peft.sam_lora_image_encoder_mask_decoder import LoRA_Sam
 from segment_anything import SamAutomaticMaskGeneratorOptMaskNMS
-# from slim_sam.segment_anything import sam_model_registry
-from segment_anything import sam_model_registry
+from slim_sam.segment_anything import sam_model_registry
+# from segment_anything import sam_model_registry
 from set_environment import set_env
 from time import time
 

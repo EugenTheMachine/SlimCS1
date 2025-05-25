@@ -51,7 +51,7 @@ def build_sam_vit_b(checkpoint=None, image_size=1024):
 def build_sam_vit_p50(checkpoint=None, image_size=1024):
     return _build_sam(
         encoder_embed_dim=384,
-        mlp_dim=1536,
+        # mlp_dim=1536,
         encoder_depth=12,
         encoder_num_heads=12,
         encoder_global_attn_indexes=[2, 5, 8, 11],
@@ -62,7 +62,7 @@ def build_sam_vit_p50(checkpoint=None, image_size=1024):
 def build_sam_vit_p77(checkpoint=None, image_size=1024):
     return _build_sam(
         encoder_embed_dim=168,
-        mlp_dim=696,
+        # mlp_dim=696,
         encoder_depth=12,
         encoder_num_heads=12,
         encoder_global_attn_indexes=[2, 5, 8, 11],
@@ -125,7 +125,7 @@ def _build_sam(
             transformer=TwoWayTransformer(
                 depth=2,
                 embedding_dim=prompt_embed_dim,
-                mlp_dim=2048,
+                mlp_dim=696,  # was 2048
                 num_heads=8,
             ),
             transformer_dim=prompt_embed_dim,
