@@ -10,6 +10,7 @@ import torch.optim as optim
 import yaml
 from torch.optim.lr_scheduler import OneCycleLR
 from torch.utils.data import DataLoader
+from torch.amp import autocast, GradScaler
 from tqdm.notebook import tqdm
 # from tqdm import tqdm
 
@@ -178,6 +179,73 @@ def compute_loss(
     return cell_prob_loss + ce_loss * config["ce_loss_weight"]
 
 
+# def train_epoch(
+#     model: LoRA_Sam,
+#     config: Dict,
+#     trainloader: DataLoader,
+#     testloader: DataLoader,
+#     optimizer: optim.Optimizer,
+#     scheduler: OneCycleLR,
+#     epoch: int,
+#     val_period: int = 1,
+#     len_train: int = 1,
+#     len_test: int = 1,
+#     stop_event=None,
+#     scaler=None
+# ):
+#     model.train()
+#     actual_ga_step = 0
+#     # training phase
+#     total_train_loss = []
+#     for i_batch, batch_data in enumerate(tqdm(trainloader, desc="Batches", leave=False)):
+#         if stop_event is not None and stop_event.is_set():
+#             return
+#         images, true_instance_masks, cell_masks, all_points, all_cell_probs = batch_data
+
+#         if not is_valid_batch(images, all_points):
+#             continue
+
+#         batch_images, batch_points = to_tensor(images, all_points, config["sam_image_size"])
+
+#         with autocast(device_type="cuda"):  # Enables mixed precision
+#             loss = compute_loss(model, config, batch_images, batch_points, cell_masks, all_points, all_cell_probs)
+#         total_train_loss.append(loss.item())
+
+#         actual_ga_step += 1
+#         loss_ga = loss / (actual_ga_step if (i_batch + 1) == len(trainloader) else config["gradient_accumulation_step"])
+#         # loss_ga.backward()
+#         scaler.scale(loss_ga).backward()
+
+#         if ((i_batch + 1) % config["gradient_accumulation_step"] == 0) or ((i_batch + 1) == len(trainloader)):
+#             # optimizer.step()
+#             optimizer.zero_grad()
+#             actual_ga_step = 0
+#             # scheduler.step()
+#             scaler.step(optimizer)
+#             scaler.update()
+#     train_loss = sum(total_train_loss) / len_train
+#     torch.cuda.empty_cache()
+#     if epoch % val_period == 0:
+#         # validation phase (here testloader is in fact validation loader)
+#         model.eval()
+#         total_val_loss = []
+#         # Use torch.no_grad() to disable gradient tracking during validation
+#         with torch.no_grad():
+#             for i_batch, batch_data in enumerate(tqdm(testloader, desc="Batches", leave=False)):
+#                 images, true_instance_masks, cell_masks, all_points, all_cell_probs = batch_data
+#                 if not is_valid_batch(images, all_points):
+#                     continue
+#                 batch_images, batch_points = to_tensor(images, all_points, config["sam_image_size"])
+#                 with autocast(device_type="cuda"):
+#                     loss = compute_loss(model, config, batch_images, batch_points, cell_masks, all_points, all_cell_probs)
+#                 total_val_loss.append(loss.item())
+#         val_loss = sum(total_val_loss) / len_test
+#     else:
+#         val_loss = -1
+#     torch.cuda.empty_cache()
+#     return train_loss, val_loss
+
+
 def train_epoch(
     model: LoRA_Sam,
     config: Dict,
@@ -189,52 +257,61 @@ def train_epoch(
     val_period: int = 1,
     len_train: int = 1,
     len_test: int = 1,
-    stop_event=None
+    stop_event=None,
+    scaler=None
 ):
     model.train()
-    actual_ga_step = 0
-    # training phase
-    total_train_loss = []
+    total_train_loss = 0.0
+    optimizer.zero_grad()  # Initialize gradients at start
+    
     for i_batch, batch_data in enumerate(tqdm(trainloader, desc="Batches", leave=False)):
         if stop_event is not None and stop_event.is_set():
             return
+            
         images, true_instance_masks, cell_masks, all_points, all_cell_probs = batch_data
-
         if not is_valid_batch(images, all_points):
             continue
 
         batch_images, batch_points = to_tensor(images, all_points, config["sam_image_size"])
 
-        loss = compute_loss(model, config, batch_images, batch_points, cell_masks, all_points, all_cell_probs)
-        total_train_loss.append(loss.item())
+        # Forward pass with mixed precision
+        with autocast():
+            loss = compute_loss(model, config, batch_images, batch_points, 
+                              cell_masks, all_points, all_cell_probs)
+            
+        # Scale loss and backward
+        scaled_loss = scaler.scale(loss / config["gradient_accumulation_step"])
+        scaled_loss.backward()
+        
+        total_train_loss += loss.item()
 
-        actual_ga_step += 1
-        loss_ga = loss / (actual_ga_step if (i_batch + 1) == len(trainloader) else config["gradient_accumulation_step"])
-        loss_ga.backward()
-
-        if ((i_batch + 1) % config["gradient_accumulation_step"] == 0) or ((i_batch + 1) == len(trainloader)):
-            optimizer.step()
+        # Gradient accumulation check
+        if (i_batch + 1) % config["gradient_accumulation_step"] == 0 or (i_batch + 1) == len(trainloader):
+            scaler.step(optimizer)
+            scaler.update()
             optimizer.zero_grad()
-            actual_ga_step = 0
             scheduler.step()
-    train_loss = sum(total_train_loss) / len_train
+
+    train_loss = total_train_loss / len_train
     torch.cuda.empty_cache()
+    
+    # Validation phase
     if epoch % val_period == 0:
-        # validation phase (here testloader is in fact validation loader)
         model.eval()
-        total_val_loss = []
-        # Use torch.no_grad() to disable gradient tracking during validation
+        total_val_loss = 0.0
         with torch.no_grad():
-            for i_batch, batch_data in enumerate(tqdm(testloader, desc="Batches", leave=False)):
+            for batch_data in tqdm(testloader, desc="Validation Batches", leave=False):
                 images, true_instance_masks, cell_masks, all_points, all_cell_probs = batch_data
                 if not is_valid_batch(images, all_points):
                     continue
                 batch_images, batch_points = to_tensor(images, all_points, config["sam_image_size"])
-                loss = compute_loss(model, config, batch_images, batch_points, cell_masks, all_points, all_cell_probs)
-                total_val_loss.append(loss.item())
-        val_loss = sum(total_val_loss) / len_test
+                loss = compute_loss(model, config, batch_images, batch_points, 
+                                  cell_masks, all_points, all_cell_probs)
+                total_val_loss += loss.item()
+        val_loss = total_val_loss / len_test
     else:
         val_loss = -1
+        
     torch.cuda.empty_cache()
     return train_loss, val_loss
 
@@ -286,11 +363,13 @@ def main(config_path: Union[str, Dict, Path], save_model: bool = True) -> LoRA_S
     # saving cfg file beforehead
     with open(config["result_dir"] + "/config.yaml", "w") as file:
         yaml.dump(config, file, default_flow_style=False, sort_keys=False)
+    scaler = GradScaler(device="cuda")
     # proceeding with actual training
     for epoch in tqdm(range(config["epoch_max"]), desc="Epochs"):
         train_loss, val_loss = train_epoch(model, config, trainloader, testloader, optimizer,
                                            scheduler, epoch=epoch, val_period=config['val_period'],
-                                           len_train=config['len_train'], len_test=config['len_test'])
+                                           len_train=config['len_train'], len_test=config['len_test'],
+                                           scaler=scaler)
         training_log["train_loss"].append(train_loss)
         training_log["val_loss"].append(val_loss)
         training_log["epoch"].append(epoch)
