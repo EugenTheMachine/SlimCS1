@@ -52,7 +52,7 @@ def build_sam_vit_b(checkpoint=None, image_size=1024):
 def build_sam_vit_p50(checkpoint=None, image_size=1024):
     return _build_sam(
         encoder_embed_dim=384,
-        mlp_dim=2048,  # was 1536
+        mlp_dim=1536,  # was 1536
         encoder_depth=12,
         encoder_num_heads=12,
         encoder_global_attn_indexes=[2, 5, 8, 11],
