@@ -17,9 +17,9 @@ test_image_dir: /kaggle/working/data_dir/cellseg1/livecell/test/images
 test_mask_dir: /kaggle/working/data_dir/cellseg1/livecell/test/masks
 
 # data
-resize_size: [512, 512]  # W x H - if set to 704x520, epoch is done in 36 mins instead of 22 mins
-patch_size: 256
-sam_image_size: 512
+resize_size: [1024, 1024]  # W x H - if set to 704x520, epoch is done in 36 mins instead of 22 mins
+patch_size: 512
+sam_image_size: 1024
 train_id: null
 train_num: "full"
 duplicate_data: 32
