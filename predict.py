@@ -4,7 +4,7 @@ from pathlib import Path
 import cv2
 import numpy as np
 import torch
-from tqdm import tqdm
+from tqdm.notebook import tqdm
 
 from data.utils import (
     keep_largest_connected_component,
