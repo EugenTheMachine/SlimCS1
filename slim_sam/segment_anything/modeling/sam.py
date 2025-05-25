@@ -168,7 +168,7 @@ class Sam(nn.Module):
                 }
             )
         return outputs
-    
+
     def encoder_image_embeddings(self, images: List[torch.Tensor],):
         input_images = torch.stack([self.preprocess(x) for x in images], dim=0)
         image_embeddings = self.image_encoder(input_images)
