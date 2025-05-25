@@ -1,0 +1,5 @@
+
+*.pth
+record/
+__pycache__/
+ckp/
