@@ -125,7 +125,7 @@ def _build_sam(
             transformer=TwoWayTransformer(
                 depth=2,
                 embedding_dim=prompt_embed_dim,
-                mlp_dim=696,  # was 2048
+                mlp_dim=2048,  # was 2048
                 num_heads=8,
             ),
             transformer_dim=prompt_embed_dim,
