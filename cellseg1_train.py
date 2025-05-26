@@ -10,7 +10,6 @@ import torch.optim as optim
 import yaml
 from torch.optim.lr_scheduler import OneCycleLR
 from torch.utils.data import DataLoader
-from torch.amp import autocast, GradScaler
 from tqdm.notebook import tqdm
 # from tqdm import tqdm
 
