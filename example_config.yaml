@@ -35,7 +35,7 @@ gradient_accumulation_step: 4
 base_lr: 3.0e-3
 onecycle_lr_pct_start: 0.3
 num_workers: 4
-val_period: 5
+val_period: 1
 
 ## Do not change the following parameters unless you know what you are doing
 
